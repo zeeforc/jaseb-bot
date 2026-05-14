@@ -275,3 +275,13 @@ def get_all_users():
     except Exception as e:
         print(f"✗ Error get_all_users: {e}")
         return []
+
+def get_all_transactions():
+    """Tarik semua riwayat transaksi yang sudah LUNAS untuk laporan admin"""
+    try:
+        # Kita ambil yang statusnya PAID (Lunas) dan diurutkan dari yang terbaru
+        response = db.table("transactions").select("*").eq("status", "PAID").order("created_at", desc=True).execute()
+        return response.data if response.data else []
+    except Exception as e:
+        logger.error(f"✗ Error get_all_transactions: {e}")
+        return []

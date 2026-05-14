@@ -108,26 +108,6 @@ class MessageWorker:
                 # Reset counter jadi 0 kalau udah ganti hari
                 if user_id not in self.daily_counts or self.daily_counts[user_id].get("date") != hari_ini:
                     self.daily_counts[user_id] = {"date": hari_ini, "count": 0}
-                    
-                # Cek apakah pengiriman hari ini udah mentok limit
-                if self.daily_counts[user_id]["count"] >= limit_harian:
-                    logger.warning(f"User {user_id} mencapai limit harian ({limit_harian}). Mesin disetop.")
-                    if notif_username:
-                        try:
-                            pesan_limit = (
-                                "⚠️ <b>LIMIT HARIAN TERCAPAI</b> ⚠️\n\n"
-                                f"Mesin otomatis dihentikan karena telah mencapai batas pengiriman paket Anda (<b>{limit_harian} pesan/hari</b>).\n\n"
-                                "<i>Silakan jalankan kembali mesin besok, atau hubungi Admin untuk Upgrade Paket!</i>"
-                            )
-                            await client.send_message(chat_id=notif_username, text=pesan_limit, parse_mode=ParseMode.HTML)
-                        except Exception: pass
-                        
-                    # Matikan status di DB & Mesin
-                    from database.crud import update_user_setting
-                    update_user_setting(user_id, "is_running", False)
-                    self.running[user_id] = False
-                    break # Hentikan looping putaran
-
                 if pesan_teks == "None": pesan_teks = None
                 if pesan_forward == "None": pesan_forward = None
 
@@ -255,7 +235,6 @@ class MessageWorker:
                             f"• Total Grup: <b>{total_grup}</b>\n"
                             f"• ✅ Berhasil: <b>{berhasil}</b>\n"
                             f"• ❌ Gagal: <b>{gagal}</b>\n"
-                            f"• 📊 Limit Harian: <b>{self.daily_counts[user_id]['count']}/{self.LIMIT_HARIAN}</b>\n"
                         )
                         
                         if gagal_list:

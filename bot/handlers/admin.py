@@ -149,3 +149,57 @@ async def proses_broadcast(message: types.Message, state: FSMContext):
         f"🔴 Gagal: <b>{gagal}</b> <i>(User blokir bot/ID salah)</i>"
     )
     await message.answer(laporan, parse_mode="HTML")
+
+@router.message(Command("laporan_transaksi"), F.from_user.id == ADMIN_ID)
+async def cmd_laporan_transaksi(message: types.Message):
+    """Menampilkan riwayat transaksi lengkap untuk admin"""
+    from database.crud import get_all_transactions
+    
+    await message.answer("📊 <b>Sedang menarik data transaksi...</b>", parse_mode="HTML")
+    
+    transaksi = get_all_transactions()
+    
+    if not transaksi:
+        await message.answer("❌ <b>Belum ada riwayat transaksi lunas ditemukan.</b>", parse_mode="HTML")
+        return
+
+    teks_header = "📊 <b>LAPORAN TRANSAKSI JASEBBOT</b> 📊\n"
+    teks_header += "──────────────────\n\n"
+    
+    teks_laporan = teks_header
+    total_pendapatan = 0
+    
+    for i, tr in enumerate(transaksi, 1):
+        # Hitung total pendapatan
+        total_pendapatan += tr.get("price", 0)
+        
+        # Format tanggal
+        created_at = tr.get("created_at", "-")
+        # Supabase: 2026-05-11T10:00:00... -> Kita ambil yang penting aja
+        waktu_rapi = str(created_at).replace("T", " ")[:16]
+
+        item = (
+            f"{i}. 🆔 <b>ID:</b> <code>{tr.get('transaction_id')}</code>\n"
+            f"   👤 <b>User:</b> @{tr.get('username')} (<code>{tr.get('telegram_id')}</code>)\n"
+            f"   📦 <b>Paket:</b> {tr.get('package').replace('_', ' ').title()}\n"
+            f"   💰 <b>Harga:</b> Rp {tr.get('price'):,}\n"
+            f"   ⏳ <b>Durasi:</b> {tr.get('duration')} Hari\n"
+            f"   📅 <b>Waktu:</b> {waktu_rapi}\n"
+            f"──────────────────\n"
+        )
+        
+        # Telegram punya limit 4096 karakter. Kalau kepanjangan, kita bagi pesannya.
+        if len(teks_laporan) + len(item) > 3800:
+            await message.answer(teks_laporan, parse_mode="HTML")
+            teks_laporan = ""
+            
+        teks_laporan += item
+
+    # Tambahkan Ringkasan di akhir
+    ringkasan = f"\n📈 <b>TOTAL PENDAPATAN:</b> Rp {total_pendapatan:,}\n"
+    ringkasan += f"✅ <b>Total Transaksi:</b> {len(transaksi)} Order"
+    
+    if teks_laporan:
+        await message.answer(teks_laporan + ringkasan, parse_mode="HTML")
+    else:
+        await message.answer(ringkasan, parse_mode="HTML")
